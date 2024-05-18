@@ -12,7 +12,7 @@
           >
             Sign in to your account
           </h1>
-          <form class="space-y-4 md:space-y-6" action="#">
+          <form class="space-y-4 md:space-y-6" @submit.prevent="submit">
             <div>
               <label
                 for="email"
@@ -22,6 +22,7 @@
               <input
                 type="email"
                 name="email"
+                v-model="email"
                 id="email"
                 class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                 placeholder="example@gmail.com"
@@ -37,6 +38,7 @@
               <input
                 type="password"
                 name="password"
+                v-model="password"
                 id="password"
                 placeholder="••••••••"
                 class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
@@ -51,7 +53,6 @@
                     aria-describedby="remember"
                     type="checkbox"
                     class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-primary-600 dark:ring-offset-gray-800"
-                    required=""
                   />
                 </div>
                 <div class="ml-3 text-sm">
@@ -87,6 +88,53 @@
   </section>
 </template>
 
-<script setup></script>
+<script setup>
+//imports
+import axios from "axios";
+import { ref } from "vue";
+import Swal from "sweetalert2";
+
+//Variables
+const email = ref("");
+const password = ref("");
+
+const submit = async () => {
+  const url = "http://192.168.29.201:4000/api/v1/users/login"; // Ensure the URL is correct
+  const bodyData = {
+    email: email.value, // Replace with the actual email value
+    password: password.value, // Replace with the actual password value
+  };
+  console.log(bodyData);
+  try {
+    // Making the POST request
+    const response = await axios.post(url, bodyData);
+    // Log the response data
+    console.log("Response:", response.data);
+  } catch (error) {
+    // Handle errors
+    if (error.response) {
+      // The request was made and the server responded with a status code that falls out of the range of 2xx
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Username or Password is Invalid",
+      });
+      console.error("Error data:", error.response.data);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error("Error request:", error.request);
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Something went wrong!",
+      });
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error("Error message:", error.message);
+    }
+    console.error("Error config:", error.config);
+  }
+};
+</script>
 
 <style scoped></style>
