@@ -93,11 +93,14 @@
 import axios from "axios";
 import { ref } from "vue";
 import Swal from "sweetalert2";
+import { useRouter } from "vue-router";
 
 //Variables
 const email = ref("");
 const password = ref("");
 
+//intializing router
+const router = useRouter();
 const submit = async () => {
   const url = "http://192.168.29.201:4000/api/v1/users/login"; // Ensure the URL is correct
   const bodyData = {
@@ -115,6 +118,8 @@ const submit = async () => {
 
       // Store the token in localStorage
       localStorage.setItem("authToken", token);
+      // Redirect to the dashboard
+      router.push("/dashboard");
     }
   } catch (error) {
     // Handle errors
