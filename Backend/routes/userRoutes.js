@@ -9,6 +9,7 @@ router.get('/login', authController.protect, (req, res, next) => {
 });
 
 router.post('/signup', authController.signUp);
+router.post('/user-verification', authController.userValid);
 router.post('/login', authController.login);
 router.post(
   '/updatePassword',

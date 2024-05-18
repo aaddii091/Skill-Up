@@ -153,3 +153,46 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
     token: token,
   });
 });
+// I have created this route as the portect route is sending user information also with the resond
+exports.userValid = catchAsync(async (req, res, next) => {
+  let token;
+
+  // Check if the Authorization header is present and starts with 'Bearer'
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  // If no token is provided or it is malformed, return an error
+  if (!token) {
+    return res.status(401).json({
+      status: 'error',
+      message: 'Please provide a valid authorization token',
+    });
+  }
+
+  try {
+    // Verify the token
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+
+    // If verification succeeds, send a success response
+    if (decoded) {
+      res.status(200).json({
+        status: 'success',
+      });
+    } else {
+      res.status(401).json({
+        status: 'error',
+        message: 'Invalid or expired token',
+      });
+    }
+  } catch (error) {
+    // If verification fails (e.g., due to invalid token or expired token), send an error response
+    return res.status(401).json({
+      status: 'error',
+      message: 'Invalid or expired token',
+    });
+  }
+});

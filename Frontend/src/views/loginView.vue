@@ -110,6 +110,12 @@ const submit = async () => {
     const response = await axios.post(url, bodyData);
     // Log the response data
     console.log("Response:", response.data);
+    if (response.status === 200 && response.data.status === "success") {
+      const token = response.data.token;
+
+      // Store the token in localStorage
+      localStorage.setItem("authToken", token);
+    }
   } catch (error) {
     // Handle errors
     if (error.response) {

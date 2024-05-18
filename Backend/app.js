@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const userRoutes = require('./routes/userRoutes');
 
 const AppError = require('./utils/appError');
@@ -7,6 +8,7 @@ const bodyParser = require('body-parser');
 
 const app = express();
 
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.static(`${__dirname}/public`));
 app.use('/api/v1/users', userRoutes);
