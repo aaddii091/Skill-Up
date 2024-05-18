@@ -5,9 +5,10 @@ import Dashboard from './../views/dashboardView.vue';
 
 const routes = [
   {
-    path: '/',
+    path: '/login',
     name: 'Login',
     component: Login,
+    meta: { requiresAuth: false },
   },
   {
     path: '/dashboard',
@@ -25,8 +26,12 @@ const router = createRouter({
 const url = 'http://192.168.29.201:4000/api/v1/users/user-verification';
 
 router.beforeEach(async (to, from, next) => {
-  if (to.matched.some((record) => record.meta.requiresAuth)) {
+  if (
+    to.matched.some((record) => record.meta.requiresAuth) &&
+    to.name !== 'Login'
+  ) {
     const authToken = localStorage.getItem('authToken');
+    console.log(to.name);
     if (authToken) {
       try {
         const response = await axios.post(
