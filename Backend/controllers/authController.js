@@ -30,24 +30,32 @@ exports.login = catchAsync(async (req, res, next) => {
 });
 exports.signUp = catchAsync(async (req, res, next) => {
   console.log(req.body);
+  try {
+    const newUser = await User.create({
+      name: req.body.name,
+      email: req.body.email,
+      password: req.body.password,
+      passwordConfirm: req.body.passwordConfirm,
+    });
 
-  const newUser = await User.create({
-    name: req.body.name,
-    email: req.body.email,
-    password: req.body.password,
-    passwordConfirm: req.body.passwordConfirm,
-  });
+    const token = signToken(newUser._id);
 
-  const token = signToken(newUser._id);
-
-  // Send a success response
-  res.status(200).json({
-    status: 'success',
-    data: {
-      user: newUser, // Include the newly created user in the response
-      token: token,
-    },
-  });
+    // Send a success response
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user: newUser, // Include the newly created user in the response
+        token: token,
+      },
+    });
+  } catch (err) {
+    res.status(409).json({
+      status: 'failure',
+      data: {
+        message: err,
+      },
+    });
+  }
 });
 exports.protect = catchAsync(async (req, res, next) => {
   let token;

@@ -2,6 +2,7 @@ import { createWebHistory, createRouter } from 'vue-router';
 import axios from 'axios';
 import Login from './../views/loginView.vue';
 import Dashboard from './../views/dashboardView.vue';
+import Signup from './../views/signupView.vue';
 
 const routes = [
   {
@@ -15,6 +16,12 @@ const routes = [
     name: 'Dashboard',
     component: Dashboard,
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/signup',
+    name: 'Signup',
+    component: Signup,
+    meta: { requiresAuth: false },
   },
 ];
 

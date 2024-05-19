@@ -3,6 +3,18 @@
     <div
       class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0"
     >
+      <a
+        href="#"
+        class="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white"
+        style="display: flex; align-content: center; align-items: self-end"
+      >
+        <img
+          class="w-10 h-10 mr-2"
+          src="./../assets/images/skill-up.png"
+          alt="logo"
+        />
+        <h1>Skill Up</h1>
+      </a>
       <div
         class="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700"
       >
@@ -73,7 +85,10 @@
             >
               Sign in
             </button>
-            <p class="text-sm font-light text-gray-500 dark:text-gray-400">
+            <p
+              @click="signup"
+              class="text-sm font-light text-gray-500 dark:text-gray-400"
+            >
               Don’t have an account yet?
               <a
                 href="#"
@@ -90,19 +105,19 @@
 
 <script setup>
 //imports
-import axios from "axios";
-import { ref } from "vue";
-import Swal from "sweetalert2";
-import { useRouter } from "vue-router";
+import axios from 'axios';
+import { ref } from 'vue';
+import Swal from 'sweetalert2';
+import { useRouter } from 'vue-router';
 
 //Variables
-const email = ref("");
-const password = ref("");
+const email = ref('');
+const password = ref('');
 
 //intializing router
 const router = useRouter();
 const submit = async () => {
-  const url = "http://192.168.29.201:4000/api/v1/users/login"; // Ensure the URL is correct
+  const url = 'http://192.168.29.201:4000/api/v1/users/login'; // Ensure the URL is correct
   const bodyData = {
     email: email.value, // Replace with the actual email value
     password: password.value, // Replace with the actual password value
@@ -112,39 +127,43 @@ const submit = async () => {
     // Making the POST request
     const response = await axios.post(url, bodyData);
     // Log the response data
-    console.log("Response:", response.data);
-    if (response.status === 200 && response.data.status === "success") {
+    console.log('Response:', response.data);
+    if (response.status === 200 && response.data.status === 'success') {
       const token = response.data.token;
 
       // Store the token in localStorage
-      localStorage.setItem("authToken", token);
+      localStorage.setItem('authToken', token);
       // Redirect to the dashboard
-      router.push("/dashboard");
+      router.push('/dashboard');
     }
   } catch (error) {
     // Handle errors
     if (error.response) {
       // The request was made and the server responded with a status code that falls out of the range of 2xx
       Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: "Username or Password is Invalid",
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Username or Password is Invalid',
       });
-      console.error("Error data:", error.response.data);
+      console.error('Error data:', error.response.data);
     } else if (error.request) {
       // The request was made but no response was received
-      console.error("Error request:", error.request);
+      console.error('Error request:', error.request);
       Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: "Something went wrong!",
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Something went wrong!',
       });
     } else {
       // Something happened in setting up the request that triggered an Error
-      console.error("Error message:", error.message);
+      console.error('Error message:', error.message);
     }
-    console.error("Error config:", error.config);
+    console.error('Error config:', error.config);
   }
+};
+
+const signup = () => {
+  router.push('/signup');
 };
 </script>
 
