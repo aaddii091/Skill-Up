@@ -10,9 +10,15 @@
   },
   "dependencies": {
     "axios": "^1.6.8",
+    "crypto": "^1.0.1",
+    "pinia": "^2.1.7",
+    "random-int": "^3.0.0",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
     "sweetalert2": "^11.11.0",
     "vue": "^3.4.21",
     "vue-router": "^4.0.13",
+    "vue-socket.io": "^3.0.10",
     "vue-sweetalert2": "^5.0.10"
   },
   "devDependencies": {

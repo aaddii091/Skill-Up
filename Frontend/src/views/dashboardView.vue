@@ -14,7 +14,16 @@
 
 <script setup>
 import Swal from 'sweetalert2';
+import { useRouter } from 'vue-router';
 import navbarView from '../components/navbarView.vue';
+import { useStore } from '../store/store';
+import randomCode from '../util/randomCode';
+
+// intializing router
+const router = useRouter();
+
+// intializing store
+const store = useStore();
 
 const joinRoom = () => {
   Swal.fire({
@@ -47,6 +56,8 @@ const joinRoom = () => {
     allowOutsideClick: () => !Swal.isLoading(),
   }).then((result) => {
     if (result.isConfirmed) {
+      const roomCode = result.value;
+      store.updateRoomCode(generatedCode);
       Swal.fire({
         title: `Room Not Found`,
         imageUrl: result.value.avatar_url,
@@ -93,9 +104,11 @@ const hostRoom = async () => {
 
   if (formValues) {
     const { noOfQuestions, noOfRounds } = formValues;
-
-    console.log(`Number of Questions: ${noOfQuestions}`);
-    console.log(`Number of Rounds: ${noOfRounds}`);
+    const generatedCode = await randomCode();
+    store.updateRoomCode(generatedCode);
+    store.numberOfQuestions(noOfQuestions);
+    store.numberOfRounds(noOfRounds);
+    router.push('/room');
   }
 };
 </script>

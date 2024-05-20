@@ -3,6 +3,9 @@ import axios from 'axios';
 import Login from './../views/loginView.vue';
 import Dashboard from './../views/dashboardView.vue';
 import Signup from './../views/signupView.vue';
+import Test from './../views/test.vue';
+import NotFound from './../components/notFoundView.vue';
+import Room from './../views/roomView.vue';
 
 const routes = [
   {
@@ -21,6 +24,27 @@ const routes = [
     path: '/signup',
     name: 'Signup',
     component: Signup,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/room',
+    name: 'Room',
+    component: Room,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/',
+    redirect: '/login',
+  },
+  {
+    path: '/:catchAll(.*)',
+    name: '404-not-found',
+    component: NotFound,
+  },
+  {
+    path: '/test',
+    name: 'TEST',
+    component: Test,
     meta: { requiresAuth: false },
   },
 ];
