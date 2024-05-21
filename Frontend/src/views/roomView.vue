@@ -15,17 +15,22 @@ import io from 'socket.io-client';
 import Swal from 'sweetalert2';
 import { useRouter } from 'vue-router';
 
+// socket
+import socket from '../util/socket';
+
 // intializing Router
 const router = useRouter();
 
 // Reactive state
 const store = useStore();
-const socket = io('http://192.168.29.201:4000'); // Ensure this matches your server URL and port
 
 socket.on('roomCreated', (code) => {
   console.log(`Room created with code: ${code}`);
 });
-
+socket.emit('response', {
+  room: store.roomCode,
+  response: 'Aditya',
+});
 socket.on('response', (data) => {
   console.log(data);
 });
@@ -34,7 +39,10 @@ socket.on('response', (data) => {
 onMounted(() => {
   const { roomCode } = store;
   if (roomCode) {
-    socket.emit('joinRoom', roomCode);
+    socket.emit('joinRoom', {
+      code: roomCode,
+      username: 'Adityas',
+    });
 
     socket.on('roomJoined', (roomCode) => {
       console.log(`Joined room with code: ${roomCode}`);

@@ -18,7 +18,7 @@ import { useRouter } from 'vue-router';
 import navbarView from '../components/navbarView.vue';
 import { useStore } from '../store/store';
 import randomCode from '../util/randomCode';
-import io from 'socket.io-client';
+import socket from '../util/socket';
 
 // intializing router
 const router = useRouter();
@@ -27,7 +27,6 @@ const router = useRouter();
 const store = useStore();
 
 // socket
-const socket = io('http://192.168.29.201:4000'); // Ensure this matches your server URL and port
 
 const joinRoom = () => {
   Swal.fire({
