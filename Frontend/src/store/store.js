@@ -4,7 +4,7 @@ export const useStore = defineStore('store', {
   state: () => ({
     count: 0,
     name: 'Eduardo',
-    roomCode: 123123,
+    roomCode: null,
     numberOfQuestions: 0,
     numberOfRounds: 0,
   }),

@@ -18,12 +18,16 @@ import { useRouter } from 'vue-router';
 import navbarView from '../components/navbarView.vue';
 import { useStore } from '../store/store';
 import randomCode from '../util/randomCode';
+import io from 'socket.io-client';
 
 // intializing router
 const router = useRouter();
 
 // intializing store
 const store = useStore();
+
+// socket
+const socket = io('http://192.168.29.201:4000'); // Ensure this matches your server URL and port
 
 const joinRoom = () => {
   Swal.fire({
@@ -35,33 +39,18 @@ const joinRoom = () => {
     showCancelButton: true,
     confirmButtonText: 'Join',
     showLoaderOnConfirm: true,
-    preConfirm: async (login) => {
-      // try {
-      //   const githubUrl = `
-      //   https://api.github.com/users/${login}
-      // `;
-      //   const response = await fetch(githubUrl);
-      //   if (!response.ok) {
-      //     return Swal.showValidationMessage(`
-      //     ${JSON.stringify(await response.json())}
-      //   `);
-      //   }
-      //   return response.json();
-      // } catch (error) {
-      //   Swal.showValidationMessage(`
-      //   Request failed: ${error}
-      // `);
-      // }
-    },
+    preConfirm: async (login) => {},
     allowOutsideClick: () => !Swal.isLoading(),
   }).then((result) => {
     if (result.isConfirmed) {
       const roomCode = result.value;
-      store.updateRoomCode(generatedCode);
-      Swal.fire({
-        title: `Room Not Found`,
-        imageUrl: result.value.avatar_url,
-      });
+      store.updateRoomCode(roomCode);
+      console.log(roomCode);
+      router.push('/room');
+      // Swal.fire({
+      //   title: `Room Not Found`,
+      //   imageUrl: result.value.avatar_url,
+      // });
     }
   });
 };
@@ -105,9 +94,10 @@ const hostRoom = async () => {
   if (formValues) {
     const { noOfQuestions, noOfRounds } = formValues;
     const generatedCode = await randomCode();
-    store.updateRoomCode(generatedCode);
     store.numberOfQuestions(noOfQuestions);
+    store.updateRoomCode(generatedCode);
     store.numberOfRounds(noOfRounds);
+    socket.emit('createRoom', store.roomCode);
     router.push('/room');
   }
 };
