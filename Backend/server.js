@@ -29,6 +29,23 @@ const io = socketIo(server);
 const rooms = {}; // Store room information
 const users = {}; // Store user information
 
+// dummy data
+const questions = [
+  {
+    text: 'Question 1',
+    options: ['Option A', 'Option B', 'Option C'],
+    correctAnswer: 'Option A',
+  },
+  {
+    text: 'Question 2',
+    options: ['Option A', 'Option B', 'Option C'],
+    correctAnswer: 'Option B',
+  },
+  // More questions...
+];
+
+const scores = {};
+
 // Socket.IO logic
 io.on('connection', (socket) => {
   console.log('A user connected', socket.id);
@@ -55,6 +72,24 @@ io.on('connection', (socket) => {
         `User: ${socket.id} tried to join non-existent room with code: ${code}`
       );
     }
+  });
+
+  socket.on('sendAnswer', (data) => {
+    const { code, userId, answer, questionIndex } = data;
+
+    // Validate the answer
+    if (questions[questionIndex].correctAnswer === answer) {
+      if (!scores[code]) {
+        scores[code] = {};
+      }
+      if (!scores[code][userId]) {
+        scores[code][userId] = 0;
+      }
+      scores[code][userId] += 1; // Increment score
+    }
+
+    // Emit updated scores to all clients in the room
+    io.to(roomId).emit('updateScores', scores[roomId]);
   });
 
   socket.on('response', (data) => {
