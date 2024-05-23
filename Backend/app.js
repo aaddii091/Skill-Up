@@ -4,7 +4,6 @@ const userRoutes = require('./routes/userRoutes');
 
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
-const bodyParser = require('body-parser');
 
 const app = express();
 
