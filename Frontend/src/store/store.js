@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 export const useStore = defineStore('store', {
   state: () => ({
     count: 0,
-    name: 'Eduardo',
+    name: 'Aditya Saxena',
     roomCode: null,
     numberOfQuestions: 0,
     numberOfRounds: 0,
@@ -20,6 +20,9 @@ export const useStore = defineStore('store', {
     },
     numberOfRounds(number) {
       this.numberOfRounds = number;
+    },
+    updateName(name) {
+      this.name = name;
     },
   },
 });
