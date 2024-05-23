@@ -109,6 +109,10 @@ import axios from 'axios';
 import { ref } from 'vue';
 import Swal from 'sweetalert2';
 import { useRouter } from 'vue-router';
+import { useStore } from '../store/store';
+
+// intializing store
+const store = useStore();
 
 //Variables
 const email = ref('');
@@ -133,6 +137,7 @@ const submit = async () => {
 
       // Store the token in localStorage
       localStorage.setItem('authToken', token);
+      store.updateName(response.data.name);
       // Redirect to the dashboard
       router.push('/dashboard');
     }
