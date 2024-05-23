@@ -74,6 +74,11 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('startQuiz', (code) => {
+    // this will run the quiz
+    startQuiz(code);
+  });
+
   socket.on('sendAnswer', (data) => {
     const { code, userId, answer, questionIndex } = data;
 
@@ -116,6 +121,20 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+function startQuiz(roomId) {
+  let questionIndex = 0;
+
+  const questionInterval = setInterval(() => {
+    if (questionIndex < questions.length) {
+      io.to(roomId).emit('newQuestion', questions[questionIndex]);
+      questionIndex++;
+    } else {
+      clearInterval(questionInterval);
+      io.to(roomId).emit('quizEnd', { scores: scores[roomId] });
+    }
+  }, 10000); // Send a new question every 10 seconds
+}
 
 // Start the server
 server.listen(port, () => {
