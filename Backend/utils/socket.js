@@ -50,9 +50,11 @@ module.exports = (server) => {
     socket.on('joinRoom', ({ code, username }) => {
       if (rooms[code]) {
         rooms[code].users.push(socket.id); // Add user to room
-        users[socket.id] = { username, room: code }; // Store user information
+        users[socket.id] = { username, room: code };
         socket.join(code); // Join the room
-        socket.emit('roomJoined', code); // Emit room code to client
+        const userList = rooms[code].users.map((id) => users[id]?.username);
+        socket.emit('roomJoined', { code: code, userList: userList }); // Emit room code to client
+        io.to(code).emit('userListUpdated', userList); // Update user list for all clients in the room
         console.log(
           `User: ${username} (ID: ${socket.id}) joined room with code: ${code}`
         );
@@ -100,12 +102,15 @@ module.exports = (server) => {
     socket.on('disconnect', () => {
       const user = users[socket.id];
       if (user) {
-        const room = rooms[user.room];
-        if (room) {
-          room.users = room.users.filter((id) => id !== socket.id);
+        const { username, room } = user;
+        const roomData = rooms[room];
+        if (roomData) {
+          roomData.users = roomData.users.filter((id) => id !== socket.id);
+          const userList = roomData.users.map((id) => users[id]?.username);
+          io.to(room).emit('userListUpdated', userList); // Update user list for all clients in the room
         }
         delete users[socket.id];
-        console.log(`User: ${user.username} (ID: ${socket.id}) disconnected`);
+        console.log(`User: ${username} (ID: ${socket.id}) disconnected`);
       } else {
         console.log('User disconnected', socket.id);
       }
