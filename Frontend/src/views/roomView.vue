@@ -60,9 +60,17 @@ onMounted(() => {
     });
 
     socket.on('roomJoined', (data) => {
+      // console.log(data);
       console.log(`Joined room with code: ${data.code} ${data.userList} `);
-      connectedUsers.value.push(data.userList);
+      // for (let x = 0; x < data.userList.user.length; x++) {
+      //   connectedUsers.value.push(data.userList.user[x]);
+      // }
       // Optionally, update UI or state to reflect that the user has joined the room
+    });
+
+    socket.on('userListUpdated', (data) => {
+      console.log(data);
+      connectedUsers.value = data;
     });
 
     socket.on('roomNotFound', () => {
