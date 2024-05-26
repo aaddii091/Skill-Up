@@ -7,6 +7,7 @@ export const useStore = defineStore('store', {
     roomCode: null,
     numberOfQuestions: 0,
     numberOfRounds: 0,
+    isHost: false,
   }),
   getters: {
     doubleCount: (state) => state.count * 2,

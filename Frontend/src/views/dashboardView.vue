@@ -29,6 +29,8 @@ const store = useStore();
 // socket
 
 const joinRoom = () => {
+  store.isHost = false;
+
   Swal.fire({
     title: 'Enter Room Code',
     input: 'text',
@@ -97,6 +99,8 @@ const hostRoom = async () => {
     store.updateRoomCode(generatedCode);
     store.numberOfRounds(noOfRounds);
     socket.emit('createRoom', store.roomCode);
+    store.isHost = true;
+
     router.push('/room');
   }
 };
