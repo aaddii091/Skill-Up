@@ -20,10 +20,11 @@ const questions = [
 
 const scores = {};
 
-function startQuiz(io, roomId) {
-  let questionIndex = 0;
+module.exports = (server) => {
+  const io = socketIo(server);
 
-  const questionInterval = setInterval(() => {
+  function startQuiz(roomId) {
+    let questionIndex = 0;
     if (questionIndex < questions.length) {
       io.to(roomId).emit('newQuestion', questions[questionIndex]);
       questionIndex++;
@@ -31,11 +32,16 @@ function startQuiz(io, roomId) {
       clearInterval(questionInterval);
       io.to(roomId).emit('quizEnd', { scores: scores[roomId] });
     }
-  }, 10000); // Send a new question every 10 seconds
-}
-
-module.exports = (server) => {
-  const io = socketIo(server);
+    const questionInterval = setInterval(() => {
+      if (questionIndex < questions.length) {
+        io.to(roomId).emit('newQuestion', questions[questionIndex]);
+        questionIndex++;
+      } else {
+        clearInterval(questionInterval);
+        io.to(roomId).emit('quizEnd', { scores: scores[roomId] });
+      }
+    }, 10000); // Send a new question every 10 seconds
+  }
 
   io.on('connection', (socket) => {
     console.log('A user connected', socket.id);
@@ -50,9 +56,11 @@ module.exports = (server) => {
     socket.on('joinRoom', ({ code, username }) => {
       if (rooms[code]) {
         rooms[code].users.push(socket.id); // Add user to room
-        users[socket.id] = { username, room: code }; // Store user information
+        users[socket.id] = { username, room: code };
         socket.join(code); // Join the room
-        socket.emit('roomJoined', code); // Emit room code to client
+        const userList = rooms[code].users.map((id) => users[id]?.username);
+        socket.emit('roomJoined', { code: code, userList: userList }); // Emit room code to client
+        io.to(code).emit('userListUpdated', userList); // Update user list for all clients in the room
         console.log(
           `User: ${username} (ID: ${socket.id}) joined room with code: ${code}`
         );
@@ -64,9 +72,9 @@ module.exports = (server) => {
       }
     });
 
-    socket.on('startQuiz', (code) => {
+    socket.on('startQuiz', (data) => {
       // This will run the quiz
-      startQuiz(io, code);
+      startQuiz(data.roomCode);
     });
 
     socket.on('sendAnswer', (data) => {
@@ -100,12 +108,15 @@ module.exports = (server) => {
     socket.on('disconnect', () => {
       const user = users[socket.id];
       if (user) {
-        const room = rooms[user.room];
-        if (room) {
-          room.users = room.users.filter((id) => id !== socket.id);
+        const { username, room } = user;
+        const roomData = rooms[room];
+        if (roomData) {
+          roomData.users = roomData.users.filter((id) => id !== socket.id);
+          const userList = roomData.users.map((id) => users[id]?.username);
+          io.to(room).emit('userListUpdated', userList); // Update user list for all clients in the room
         }
         delete users[socket.id];
-        console.log(`User: ${user.username} (ID: ${socket.id}) disconnected`);
+        console.log(`User: ${username} (ID: ${socket.id}) disconnected`);
       } else {
         console.log('User disconnected', socket.id);
       }
