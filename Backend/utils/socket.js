@@ -20,10 +20,11 @@ const questions = [
 
 const scores = {};
 
-function startQuiz(io, roomId) {
-  let questionIndex = 0;
+module.exports = (server) => {
+  const io = socketIo(server);
 
-  const questionInterval = setInterval(() => {
+  function startQuiz(roomId) {
+    let questionIndex = 0;
     if (questionIndex < questions.length) {
       io.to(roomId).emit('newQuestion', questions[questionIndex]);
       questionIndex++;
@@ -31,11 +32,16 @@ function startQuiz(io, roomId) {
       clearInterval(questionInterval);
       io.to(roomId).emit('quizEnd', { scores: scores[roomId] });
     }
-  }, 10000); // Send a new question every 10 seconds
-}
-
-module.exports = (server) => {
-  const io = socketIo(server);
+    const questionInterval = setInterval(() => {
+      if (questionIndex < questions.length) {
+        io.to(roomId).emit('newQuestion', questions[questionIndex]);
+        questionIndex++;
+      } else {
+        clearInterval(questionInterval);
+        io.to(roomId).emit('quizEnd', { scores: scores[roomId] });
+      }
+    }, 10000); // Send a new question every 10 seconds
+  }
 
   io.on('connection', (socket) => {
     console.log('A user connected', socket.id);
@@ -66,9 +72,9 @@ module.exports = (server) => {
       }
     });
 
-    socket.on('startQuiz', (code) => {
+    socket.on('startQuiz', (data) => {
       // This will run the quiz
-      startQuiz(io, code);
+      startQuiz(data.roomCode);
     });
 
     socket.on('sendAnswer', (data) => {
