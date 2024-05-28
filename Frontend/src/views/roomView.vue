@@ -1,27 +1,32 @@
 <template>
   <div>
-    <div v-if="isLoading" class="loader"></div>
-    <div v-if="isUsers" class="outer-container">
+    <span v-if="isLoading" class="loader"></span>
+    <div class="outer-container">
       <navbar />
-      <h1>ROOMS</h1>
-      <div class="user-container">
-        <h3>
-          Code - {{ roomCode }}
-          <i @click="copyCode" class="bx bx-copy copy"></i>
-        </h3>
-        <div class="user-inner">
-          <h1 class="user-connected">USERS CONNECTED</h1>
-          <h2 class="text-center" v-for="user in connectedUsers" :key="user">
-            {{ user }}
-          </h2>
+      <div v-if="isUsers">
+        <h1>ROOMS</h1>
+        <div class="user-container">
+          <h3>
+            Code - {{ roomCode }}
+            <i @click="copyCode" class="bx bx-copy copy"></i>
+          </h3>
+          <div class="user-inner">
+            <h1 class="user-connected">USERS CONNECTED</h1>
+            <h2 class="text-center" v-for="user in connectedUsers" :key="user">
+              {{ user }}
+            </h2>
+          </div>
+
+          <button class="button my-6" @click="startQuiz">Start</button>
         </div>
+      </div>
+      <div v-if="isQuestions">
         <div v-if="currentQuestion">
-          <h2>{{ currentQuestion.text }}</h2>
+          <h2>{{ currentQuestion }} question</h2>
         </div>
-        <button class="button my-6" @click="startQuiz">Start</button>
+        <div v-else>Error Starting The Quiz :sweat_smile: Try Again !</div>
       </div>
     </div>
-    <div></div>
   </div>
 </template>
 
@@ -43,6 +48,7 @@ const store = useStore();
 
 // intializing variables
 const currentQuestion = ref(null);
+const currentOptions = ref([]);
 const selectedAnswer = ref('');
 const scores = ref({});
 const connectedUsers = ref(['qwerty', 'asdfg', 'assdd']);
@@ -52,7 +58,7 @@ isHost.value = store.isHost;
 
 //loading state
 const isUsers = ref(true);
-const isLoading = ref(false);
+const isLoading = ref(true);
 const isQuestions = ref(false);
 
 //Page functions
@@ -115,8 +121,10 @@ onMounted(() => {
       },
     });
   }
-  socket.on('newQuestion', (question) => {
-    currentQuestion.value = question;
+  socket.on('newQuestion', (data) => {
+    currentQuestion.value = data.question;
+    currentOptions.value = data.options;
+    console.log(currentOptions.value);
   });
 
   socket.on('updateScores', (updatedScores) => {
@@ -125,7 +133,6 @@ onMounted(() => {
 
   socket.on('quizEnd', (data) => {
     // Handle end of quiz, display final scores, etc.
-    alert('Quiz ended! Final scores: ' + JSON.stringify(data.scores));
   });
 });
 
@@ -136,9 +143,17 @@ const bodyData = {
 
 const startQuiz = () => {
   isLoading.value = true;
-  const response = axios.post('');
+  // const response = axios.post('');
   socket.emit('startQuiz', { roomCode: store.roomCode });
 };
+
+socket.on('stopLoader', () => {
+  isUsers.value = false;
+  isQuestions.value = true;
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 1000);
+});
 </script>
 
 <style scoped lang="scss">
