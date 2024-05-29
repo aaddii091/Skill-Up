@@ -1,46 +1,52 @@
+const axios = require('axios');
 const socketIo = require('socket.io');
+
+let currentPostedQuestionIndex = 0;
 
 const rooms = {}; // Store room information
 const users = {}; // Store user information
+const scores = {}; // Updated to use 'scores' consistently
 
 // Dummy data
-const questions = [
-  {
-    text: 'Question 1',
-    options: ['Option A', 'Option B', 'Option C'],
-    correctAnswer: 'Option A',
-  },
-  {
-    text: 'Question 2',
-    options: ['Option A', 'Option B', 'Option C'],
-    correctAnswer: 'Option B',
-  },
-  // More questions...
-];
-
-const scores = {};
+let questions = [];
 
 module.exports = (server) => {
   const io = socketIo(server);
 
-  function startQuiz(roomId) {
+  async function startQuiz(roomId) {
+    io.to(roomId).emit('startLoading');
+
+    const url = 'http://192.168.29.201:4000/api/v1/feature/createQuiz'; // Ensure the URL is correct
+    const bodyData = {
+      topic: 'HTML',
+    };
+    console.log('api running');
+    const response = await axios.post(url, bodyData);
+    questions = JSON.parse(response.data.quiz);
+    console.log(questions.questions[0].question);
+
+    // Stop loader
+    io.to(roomId).emit('stopLoader');
+
     let questionIndex = 0;
-    if (questionIndex < questions.length) {
-      io.to(roomId).emit('newQuestion', questions[questionIndex]);
-      questionIndex++;
-    } else {
-      clearInterval(questionInterval);
-      io.to(roomId).emit('quizEnd', { scores: scores[roomId] });
-    }
-    const questionInterval = setInterval(() => {
-      if (questionIndex < questions.length) {
-        io.to(roomId).emit('newQuestion', questions[questionIndex]);
+    let questionInterval;
+
+    const sendQuestion = () => {
+      if (questionIndex < questions.questions.length) {
+        currentPostedQuestionIndex = questionIndex;
+        io.to(roomId).emit('newQuestion', {
+          question: questions.questions[questionIndex].question,
+          options: questions.questions[questionIndex].options,
+          index: questionIndex,
+        });
         questionIndex++;
       } else {
-        clearInterval(questionInterval);
-        io.to(roomId).emit('quizEnd', { scores: scores[roomId] });
+        clearInterval(questionInterval); // Stop sending questions when done
       }
-    }, 10000); // Send a new question every 10 seconds
+    };
+
+    sendQuestion(); // Send the first question immediately
+    questionInterval = setInterval(sendQuestion, 10000);
   }
 
   io.on('connection', (socket) => {
@@ -81,7 +87,8 @@ module.exports = (server) => {
       const { code, userId, answer, questionIndex } = data;
 
       // Validate the answer
-      if (questions[questionIndex].correctAnswer === answer) {
+
+      if (questions.questions[questionIndex].answer === answer) {
         if (!scores[code]) {
           scores[code] = {};
         }
