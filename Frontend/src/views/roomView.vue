@@ -22,7 +22,25 @@
       </div>
       <div v-if="isQuestions">
         <div v-if="currentQuestion">
-          <h2>{{ currentQuestion }} question</h2>
+          <div class="options">
+            <h2>
+              <i class="bx bx-right-arrow-alt icon"></i>{{ currentQuestion }}
+            </h2>
+            <ul>
+              <li
+                v-for="options in currentOptions"
+                :key="options"
+                class="option"
+                @click="toggleSelection(options)"
+              >
+                {{ options }}
+                <i
+                  v-if="selectedAnswer === options"
+                  class="bx bx-collapse-horizontal icon"
+                ></i>
+              </li>
+            </ul>
+          </div>
         </div>
         <div v-else>Error Starting The Quiz :sweat_smile: Try Again !</div>
       </div>
@@ -50,6 +68,7 @@ const store = useStore();
 const currentQuestion = ref(null);
 const currentOptions = ref([]);
 const selectedAnswer = ref('');
+const selectedOption = ref('');
 const scores = ref({});
 const connectedUsers = ref(['qwerty', 'asdfg', 'assdd']);
 const roomCode = store.roomCode;
@@ -58,12 +77,16 @@ isHost.value = store.isHost;
 
 //loading state
 const isUsers = ref(true);
-const isLoading = ref(true);
+const isLoading = ref(false);
 const isQuestions = ref(false);
 
 //Page functions
 const copyCode = () => {
   navigator.clipboard.writeText(roomCode);
+};
+
+const toggleSelection = (option) => {
+  selectedAnswer.value = selectedAnswer.value === option ? null : option;
 };
 
 socket.on('roomCreated', (code) => {
@@ -206,5 +229,40 @@ socket.on('stopLoader', () => {
 .copy:active {
   transition: all 0.25s;
   filter: invert(100%);
+}
+.options {
+  border: 1px solid white;
+  h2 {
+    border: 1px solid white;
+    padding: 10px 0.25rem;
+    display: flex;
+    align-items: center;
+  }
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    li {
+      padding: 20px 10px;
+      margin: 20px 5px;
+      width: 45vw;
+      border: 1px solid white;
+      display: flex;
+      justify-content: space-between;
+    }
+    li:hover {
+      background-color: rgb(172, 255, 215);
+      color: black;
+      cursor: pointer;
+      transition: box-shadow 200ms ease, transform 200ms ease;
+      transform: translate(2px, -2px);
+      box-shadow: -4px 4px 0 rgb(54, 201, 0);
+    }
+    li:active {
+    }
+  }
+}
+.icon {
+  margin: 0.1rem 10px;
 }
 </style>
