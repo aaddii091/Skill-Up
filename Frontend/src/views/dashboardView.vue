@@ -47,11 +47,8 @@ const joinRoom = () => {
       const roomCode = result.value;
       store.updateRoomCode(roomCode);
       console.log(roomCode);
+      store.updateHost(false);
       router.push('/room');
-      // Swal.fire({
-      //   title: `Room Not Found`,
-      //   imageUrl: result.value.avatar_url,
-      // });
     }
   });
 };
@@ -99,7 +96,7 @@ const hostRoom = async () => {
     store.updateRoomCode(generatedCode);
     store.numberOfRounds(noOfRounds);
     socket.emit('createRoom', store.roomCode);
-    store.isHost = true;
+    store.updateHost(true);
 
     router.push('/room');
   }

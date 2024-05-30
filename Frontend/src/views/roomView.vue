@@ -17,7 +17,9 @@
             </h2>
           </div>
 
-          <button class="button my-6" @click="startQuiz">Start</button>
+          <button class="button my-6" @click="startQuiz" v-if="isHost">
+            Start
+          </button>
         </div>
       </div>
       <div v-if="isQuestions">
@@ -31,7 +33,7 @@
                 v-for="options in currentOptions"
                 :key="options"
                 class="option"
-                @click="toggleSelection(options)"
+                @click="sendAnswer(options)"
               >
                 {{ options }}
                 <i
@@ -41,8 +43,16 @@
               </li>
             </ul>
           </div>
+          <div v-if="scores">
+            <h2>Scores:</h2>
+            <ul>
+              <li v-for="(username, score) in scores" :key="username">
+                {{ username }}: {{ score }} {{ scores }}
+              </li>
+            </ul>
+          </div>
         </div>
-        <div v-else>Error Starting The Quiz :sweat_smile: Try Again !</div>
+        <div v-else>Error Starting The Quiz Try Again !</div>
       </div>
     </div>
   </div>
@@ -66,9 +76,9 @@ const store = useStore();
 
 // intializing variables
 const currentQuestion = ref(null);
+const currentQuestionIndex = ref(0);
 const currentOptions = ref([]);
 const selectedAnswer = ref('');
-const selectedOption = ref('');
 const scores = ref({});
 const connectedUsers = ref(['qwerty', 'asdfg', 'assdd']);
 const roomCode = store.roomCode;
@@ -85,9 +95,24 @@ const copyCode = () => {
   navigator.clipboard.writeText(roomCode);
 };
 
-const toggleSelection = (option) => {
-  selectedAnswer.value = selectedAnswer.value === option ? null : option;
+const sendAnswer = (option) => {
+  selectedAnswer.value = option;
+  // socket.emit('sendAnswer', {
+  //   code: roomCode,
+  //   userId: socket.id,
+  //   answer: option,
+  //   questionIndex: currentQuestionIndex.value,
+  // });
 };
+
+socket.on('evaluateAnswer', () => {
+  socket.emit('sendAnswer', {
+    code: roomCode,
+    userId: socket.id,
+    answer: selectedAnswer.value,
+    questionIndex: currentQuestionIndex.value,
+  });
+});
 
 socket.on('roomCreated', (code) => {
   console.log(`Room created with code: ${code}`);
@@ -110,12 +135,7 @@ onMounted(() => {
     });
 
     socket.on('roomJoined', (data) => {
-      // console.log(data);
-      console.log(`Joined room with code: ${data.code} ${data.userList} `);
-      // for (let x = 0; x < data.userList.user.length; x++) {
-      //   connectedUsers.value.push(data.userList.user[x]);
-      // }
-      // Optionally, update UI or state to reflect that the user has joined the room
+      console.log(`Joined room with code: ${data.code} ${data.userList}`);
     });
 
     socket.on('userListUpdated', (data) => {
@@ -144,38 +164,39 @@ onMounted(() => {
       },
     });
   }
+
   socket.on('newQuestion', (data) => {
+    selectedAnswer.value = '';
     currentQuestion.value = data.question;
     currentOptions.value = data.options;
+    currentQuestionIndex.value = data.index;
     console.log(currentOptions.value);
   });
 
-  socket.on('updateScores', (updatedScores) => {
-    scores.value = updatedScores;
-  });
-
-  socket.on('quizEnd', (data) => {
-    // Handle end of quiz, display final scores, etc.
+  socket.on('updateScores', (data) => {
+    console.log(data);
+    scores.value = data;
   });
 });
 
-const url = 'http://192.168.29.201:4000/api/v1/feature/createQuiz'; // Ensure the URL is correct
-const bodyData = {
-  topic: 'HTML',
-};
-
 const startQuiz = () => {
-  isLoading.value = true;
-  // const response = axios.post('');
   socket.emit('startQuiz', { roomCode: store.roomCode });
 };
+socket.on('startLoading', () => {
+  isLoading.value = true;
+});
+socket.on('endQuiz', () => {
+  alert('Quiz has ended!');
+  // Perform any other actions needed after the quiz ends
+});
 
 socket.on('stopLoader', () => {
   isUsers.value = false;
   isQuestions.value = true;
-  setTimeout(() => {
-    isLoading.value = false;
-  }, 1000);
+  console.log(isQuestions);
+  // setTimeout(() => {/
+  isLoading.value = false;
+  // }, 1000);
 });
 </script>
 
