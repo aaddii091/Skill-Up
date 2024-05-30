@@ -25,5 +25,8 @@ export const useStore = defineStore('store', {
     updateName(name) {
       this.name = name;
     },
+    updateHost(data) {
+      this.isHost = data;
+    },
   },
 });

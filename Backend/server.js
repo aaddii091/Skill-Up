@@ -12,6 +12,7 @@ mongoose
   .connect(process.env.DATABASE)
   .then((con) => {
     console.log('DB connection successful!');
+    // console.log(con);
   })
   .catch((error) => {
     console.error('Error connecting to MongoDB:', error.message);

@@ -13,6 +13,7 @@ exports.createQuiz = catchAsync(async (req, res, next) => {
       'https://api.openai.com/v1/chat/completions',
       {
         model: 'gpt-3.5-turbo',
+        response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
@@ -20,7 +21,7 @@ exports.createQuiz = catchAsync(async (req, res, next) => {
           },
           {
             role: 'user',
-            content: `Generate 5 multiple-choice questions related to the topic: ${topic}. Each question should have four options and one correct answer. Format the response as JSON.`,
+            content: `Generate 5 multiple-choice questions related to the topic: ${topic}. Each question should have four options and one correct answer. Format the response in JSON only.`,
           },
         ],
         max_tokens: 300,
@@ -34,7 +35,13 @@ exports.createQuiz = catchAsync(async (req, res, next) => {
       }
     );
 
-    const quizData = JSON.parse(response.data.choices[0].message.content);
+    let quizData;
+    try {
+      quizData = response.data.choices[0].message.content.trim();
+    } catch (parseError) {
+      console.error('Error parsing JSON:', parseError);
+      return res.status(500).json({ error: 'Failed to parse quiz data' });
+    }
 
     res.status(200).json({
       status: 'success',
