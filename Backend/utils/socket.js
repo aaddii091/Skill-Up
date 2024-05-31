@@ -65,9 +65,9 @@ module.exports = (server) => {
 
     socket.on('joinRoom', ({ code, username }) => {
       if (rooms[code]) {
-        rooms[code].users.push(socket.id); // Add user to room
+        rooms[code].users.push(socket.id);
         users[socket.id] = { username, room: code };
-        socket.join(code); // Join the room
+        socket.join(code);
         const userList = rooms[code].users.map((id) => users[id]?.username);
         socket.emit('roomJoined', { code: code, userList: userList }); // Emit room code to client
         io.to(code).emit('userListUpdated', userList); // Update user list for all clients in the room
@@ -96,15 +96,23 @@ module.exports = (server) => {
           scores[code] = {};
         }
         if (!scores[code][userId]) {
-          scores[code][userId] = 0;
+          scores[code][userId] = {
+            username: users[userId].username
+              ? users[userId].username
+              : 'Not Known',
+            score: 0,
+          };
         }
-        scores[code][userId] += 1; // Increment score
+        scores[code][userId].score += 1; // Increment score
         score = scores[code][userId];
+        console.log(scores[code]);
+        console.log(scores[code][userId]);
       }
-      username = users[userId].username;
+      // /  let username = users[userId].username;
+      // let deliverables = { username: username, score: score };
       // Emit updated scores to all clients in the room
-      deliverables = { username: score };
-      io.to(code).emit('updateScores', deliverables);
+      console.log(scores[code]);
+      io.to(code).emit('updateScores', scores[code]);
     });
 
     socket.on('response', (data) => {
