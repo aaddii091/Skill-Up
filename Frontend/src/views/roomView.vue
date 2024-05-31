@@ -46,8 +46,8 @@
           <div v-if="scores">
             <h2>Scores:</h2>
             <ul>
-              <li v-for="(username, score) in scores" :key="username">
-                {{ username }}: {{ score }} {{ scores }}
+              <li v-for="data in scores" :key="data">
+                {{ data.username }}: {{ data.score }}
               </li>
             </ul>
           </div>
