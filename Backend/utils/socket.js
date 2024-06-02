@@ -16,7 +16,7 @@ module.exports = (server) => {
   let questionInterval;
   const maxQuestions = 5; // Maximum number of questions to send
 
-  const sendQuestion = () => {
+  const sendQuestion = async () => {
     if (questionIndex < questions.questions.length) {
       io.to(joinedRoomId).emit('evaluateAnswer');
       currentPostedQuestionIndex = questionIndex;
@@ -27,7 +27,7 @@ module.exports = (server) => {
       });
       questionIndex++;
     } else {
-      io.to(joinedRoomId).emit('evaluateAnswer');
+      await io.to(joinedRoomId).emit('evaluateAnswer');
       clearInterval(questionInterval); // Stop sending questions when done
       io.to(joinedRoomId).emit('endQuiz'); // Emit an event to indicate the quiz has ended
     }
@@ -50,7 +50,7 @@ module.exports = (server) => {
     io.to(roomId).emit('stopLoader');
     questionIndex = 0; // Reset question index
     sendQuestion(); // Send the first question immediately
-    questionInterval = setInterval(sendQuestion, 4000); // Send subsequent questions every 4 seconds
+    questionInterval = setInterval(sendQuestion, 400000); // Send subsequent questions every 4 seconds
   }
 
   io.on('connection', (socket) => {
@@ -68,8 +68,17 @@ module.exports = (server) => {
         rooms[code].users.push(socket.id);
         users[socket.id] = { username, room: code };
         socket.join(code);
+        // Set the first user as the host
+        if (!rooms[code].host) {
+          rooms[code].host = socket.id;
+        }
         const userList = rooms[code].users.map((id) => users[id]?.username);
-        socket.emit('roomJoined', { code: code, userList: userList }); // Emit room code to client
+        socket.emit('roomJoined', {
+          code: code,
+          userList: userList,
+          host: rooms[code].host,
+          id: socket.id,
+        }); // Emit room code to client
         io.to(code).emit('userListUpdated', userList); // Update user list for all clients in the room
         console.log(
           `User: ${username} (ID: ${socket.id}) joined room with code: ${code}`
