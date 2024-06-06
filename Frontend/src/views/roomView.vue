@@ -1,6 +1,6 @@
 <template>
   <div>
-    <span v-if="isLoading" class="loader"></span>
+    <div v-if="isLoading" id="cover-spin"></div>
     <div class="outer-container">
       <navbar />
       <div v-if="isUsers">
@@ -46,8 +46,8 @@
           <div v-if="scores">
             <h2>Scores:</h2>
             <ul>
-              <li v-for="(username, score) in scores" :key="username">
-                {{ username }}: {{ score }} {{ scores }}
+              <li v-for="data in scores" :key="data">
+                {{ data.username }}: {{ data.score }}
               </li>
             </ul>
           </div>
@@ -59,7 +59,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useStore } from '../store/store';
 import Swal from 'sweetalert2';
 import { useRouter } from 'vue-router';
@@ -80,10 +80,12 @@ const currentQuestionIndex = ref(0);
 const currentOptions = ref([]);
 const selectedAnswer = ref('');
 const scores = ref({});
-const connectedUsers = ref(['qwerty', 'asdfg', 'assdd']);
-const roomCode = store.roomCode;
+const connectedUsers = ref([]);
+const roomCode = computed(() => {
+  return store.roomCode ? store.roomCode : getFromLocalStorage('roomCode');
+});
 const isHost = ref(false);
-isHost.value = store.isHost;
+// isHost.value = store.isHost;
 
 //loading state
 const isUsers = ref(true);
@@ -125,8 +127,26 @@ socket.on('response', (data) => {
   console.log(data);
 });
 
-// Join the room on component mount if there's a room code in the store
+// Store data in localStorage
+const saveToLocalStorage = (key, value) => {
+  localStorage.setItem(key, value);
+};
+
+// Retrieve data from localStorage
+const getFromLocalStorage = (key) => {
+  return localStorage.getItem(key);
+};
+
+// Remove data from localStorage
+const removeFromLocalStorage = (key) => {
+  localStorage.removeItem(key);
+};
+
+// Join the room on component mount if there's a room code in the store// localstorage
 onMounted(() => {
+  let roomCodeLocal = getFromLocalStorage('roomCode');
+  let nameLocal = getFromLocalStorage('username');
+
   const { roomCode, name } = store;
   if (roomCode) {
     socket.emit('joinRoom', {
@@ -136,6 +156,12 @@ onMounted(() => {
 
     socket.on('roomJoined', (data) => {
       console.log(`Joined room with code: ${data.code} ${data.userList}`);
+      console.log(data);
+      saveToLocalStorage('roomCode', data.code);
+      saveToLocalStorage('username', store.name);
+      if (data.host === data.id) {
+        isHost.value = true;
+      }
     });
 
     socket.on('userListUpdated', (data) => {
@@ -154,12 +180,32 @@ onMounted(() => {
         },
       });
     });
+  } else if (roomCodeLocal && nameLocal) {
+    socket.emit('joinRoom', {
+      code: roomCodeLocal,
+      username: nameLocal,
+    });
+
+    socket.on('roomJoined', (data) => {
+      console.log(`Joined room with code: ${data.code} ${data.userList}`);
+      console.log(data);
+      if (data.host === data.id) {
+        isHost.value = true;
+      }
+    });
+
+    socket.on('userListUpdated', (data) => {
+      console.log(data);
+      connectedUsers.value = data;
+    });
   } else {
     Swal.fire({
       title: 'Knock Knock?',
       text: 'No one is opening the door',
       icon: 'question',
       preConfirm: () => {
+        removeFromLocalStorage('roomCode');
+        removeFromLocalStorage('username');
         router.push('/dashboard');
       },
     });
@@ -253,8 +299,10 @@ socket.on('stopLoader', () => {
 }
 .options {
   border: 1px solid white;
+  border-radius: 10px;
   h2 {
     border: 1px solid white;
+    border-radius: 10px 10px 0px 0px;
     padding: 10px 0.25rem;
     display: flex;
     align-items: center;
