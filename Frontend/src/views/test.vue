@@ -21,7 +21,7 @@ import { useStore } from '../store/store';
 import io from 'socket.io-client';
 
 // Initialize socket connection
-const socket = io('http://192.168.29.201:4000'); // Ensure this matches your server URL and port
+const socket = io('http://localhost:4000'); // Ensure this matches your server URL and port
 
 // Reactive state
 const store = useStore();

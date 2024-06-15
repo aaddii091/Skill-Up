@@ -333,5 +333,7 @@ socket.on('stopLoader', () => {
 }
 .icon {
   margin: 0.1rem 10px;
+
 }
+.short
 </style>

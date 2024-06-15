@@ -121,7 +121,7 @@ const password = ref('');
 //intializing router
 const router = useRouter();
 const submit = async () => {
-  const url = 'http://192.168.29.201:4000/api/v1/users/login'; // Ensure the URL is correct
+  const url = `${import.meta.env.VITE_SERVER_API_URL}users/login`; // Ensure the URL is correct
   const bodyData = {
     email: email.value, // Replace with the actual email value
     password: password.value, // Replace with the actual password value

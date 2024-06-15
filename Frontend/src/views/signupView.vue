@@ -158,7 +158,7 @@ const redirectToLogin = () => {
 
 const onSubmit = async () => {
   //signup parameters
-  const url = 'http://192.168.29.201:4000/api/v1/users/signup';
+  const url = `${import.meta.env.VITE_SERVER_API_URL}users/signup`;
   const bodyData = {
     name: username.value,
     email: email.value,

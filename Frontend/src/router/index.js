@@ -54,7 +54,7 @@ const router = createRouter({
   routes,
 });
 
-const url = 'http://192.168.29.201:4000/api/v1/users/user-verification';
+const url = `${import.meta.env.VITE_SERVER_API_URL}users/user-verification`;
 
 router.beforeEach(async (to, from, next) => {
   if (
