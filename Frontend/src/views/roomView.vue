@@ -46,8 +46,8 @@
           <div v-if="scores">
             <h2>Scores:</h2>
             <ul>
-              <li v-for="(username, score) in scores" :key="username">
-                {{ username }}: {{ score }} {{ scores }}
+              <li v-for="(name) in players" :key="name">
+                {{ name.name }} : {{ name.score }}
               </li>
             </ul>
           </div>
@@ -80,6 +80,7 @@ const currentQuestionIndex = ref(0);
 const currentOptions = ref([]);
 const selectedAnswer = ref('');
 const scores = ref({});
+let players;
 const connectedUsers = ref(['qwerty', 'asdfg', 'assdd']);
 const roomCode = store.roomCode;
 const isHost = ref(false);
@@ -89,6 +90,24 @@ isHost.value = store.isHost;
 const isUsers = ref(true);
 const isLoading = ref(false);
 const isQuestions = ref(false);
+
+// Function to extract player names and scores from the proxy object
+function extractPlayersData(proxyObj) {
+  let playersArray = [];
+
+  // Iterate over the proxy object keys
+  for (let key in proxyObj) {
+    if (proxyObj.hasOwnProperty(key)) {
+      const player = proxyObj[key];
+      playersArray.push({
+        name: player.username,
+        score: player.score,
+      });
+    }
+  }
+
+  return playersArray;
+}
 
 //Page functions
 const copyCode = () => {
@@ -186,7 +205,10 @@ socket.on('startLoading', () => {
   isLoading.value = true;
 });
 socket.on('endQuiz', () => {
-  alert('Quiz has ended!');
+  isLoading.value = true;
+  players = extractPlayersData(scores.value);
+  console.log(players);
+
   // Perform any other actions needed after the quiz ends
 });
 
