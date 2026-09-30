@@ -40,12 +40,15 @@ exports.signUp = catchAsync(async (req, res, next) => {
     });
 
     const token = signToken(newUser._id);
+    const user = newUser.toObject();
+    delete user.password;
+    delete user.passwordConfirm;
 
     // Send a success response
     res.status(200).json({
       status: 'success',
       data: {
-        user: newUser, // Include the newly created user in the response
+        user,
         token: token,
       },
     });
