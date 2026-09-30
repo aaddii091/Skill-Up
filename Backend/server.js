@@ -8,8 +8,12 @@ const socketIo = require('socket.io'); // Import Socket.IO
 dotenv.config({ path: './config.env' });
 
 // CONNECTING MONGODB
+const mongoOptions = process.env.MONGODB_X509_CERT
+  ? { tlsCertificateKeyFile: process.env.MONGODB_X509_CERT }
+  : {};
+
 mongoose
-  .connect(process.env.DATABASE)
+  .connect(process.env.DATABASE, mongoOptions)
   .then((con) => {
     console.log('DB connection successful!');
     // console.log(con);
