@@ -12,8 +12,8 @@
           </h3>
           <div class="user-inner">
             <h1 class="user-connected">USERS CONNECTED</h1>
-            <h2 class="text-center" v-for="user in connectedUsers" :key="user">
-              {{ user }}
+              <h2 class="text-center" v-for="user in connectedUsers" :key="user.id">
+              {{ user.username }}
             </h2>
           </div>
 
@@ -34,6 +34,7 @@
                 :key="options"
                 class="option"
                 @click="sendAnswer(options)"
+                :class="{ selected: selectedAnswer === options }"
               >
                 {{ options }}
                 <i
@@ -43,23 +44,30 @@
               </li>
             </ul>
           </div>
-          <div v-if="scores">
+          <div v-if="answerResult" class="answer-result" :class="answerResult.correct ? 'correct' : 'incorrect'">
+            <strong>{{ answerResult.correct ? 'Correct!' : 'Not quite.' }}</strong>
+            <span>The answer is {{ answerResult.answer }}.</span>
+            <p v-if="answerResult.explanation">{{ answerResult.explanation }}</p>
+          </div>
+          <button v-if="isHost && !quizFinished" class="button" @click="nextQuestion">Next question</button>
+          <div v-if="scores.length">
             <h2>Scores:</h2>
             <ul>
-              <li v-for="data in scores" :key="data">
+              <li v-for="data in scores" :key="data.username">
                 {{ data.username }}: {{ data.score }}
               </li>
             </ul>
           </div>
         </div>
-        <div v-else>Error Starting The Quiz Try Again !</div>
+        <div v-else>Preparing your AI quiz...</div>
       </div>
+      <div v-if="quizFinished" class="quiz-finished"><h2>Quiz complete!</h2><p>Thanks for playing. The final scores are shown above.</p></div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useStore } from '../store/store';
 import Swal from 'sweetalert2';
 import { useRouter } from 'vue-router';
@@ -79,7 +87,7 @@ const currentQuestion = ref(null);
 const currentQuestionIndex = ref(0);
 const currentOptions = ref([]);
 const selectedAnswer = ref('');
-const scores = ref({});
+const scores = ref([]);
 const connectedUsers = ref([]);
 const roomCode = computed(() => {
   return store.roomCode ? store.roomCode : getFromLocalStorage('roomCode');
@@ -91,41 +99,24 @@ const isHost = ref(false);
 const isUsers = ref(true);
 const isLoading = ref(false);
 const isQuestions = ref(false);
+const answerResult = ref(null);
+const quizFinished = ref(false);
 
 //Page functions
 const copyCode = () => {
-  navigator.clipboard.writeText(roomCode);
+  navigator.clipboard.writeText(roomCode.value);
+  Swal.fire({ title: 'Copied!', text: 'Room code copied to your clipboard.', icon: 'success', timer: 1200, showConfirmButton: false });
 };
 
 const sendAnswer = (option) => {
+  if (selectedAnswer.value || !roomCode.value) return;
   selectedAnswer.value = option;
-  // socket.emit('sendAnswer', {
-  //   code: roomCode,
-  //   userId: socket.id,
-  //   answer: option,
-  //   questionIndex: currentQuestionIndex.value,
-  // });
-};
-
-socket.on('evaluateAnswer', () => {
-  socket.emit('sendAnswer', {
-    code: roomCode,
-    userId: socket.id,
-    answer: selectedAnswer.value,
+  socket.emit('submitAnswer', {
+    roomCode: roomCode.value,
+    answer: option,
     questionIndex: currentQuestionIndex.value,
   });
-});
-
-socket.on('roomCreated', (code) => {
-  console.log(`Room created with code: ${code}`);
-});
-socket.emit('response', {
-  room: store.roomCode,
-  response: 'Aditya',
-});
-socket.on('response', (data) => {
-  console.log(data);
-});
+};
 
 // Store data in localStorage
 const saveToLocalStorage = (key, value) => {
@@ -143,7 +134,7 @@ const removeFromLocalStorage = (key) => {
 };
 
 // Join the room on component mount if there's a room code in the store// localstorage
-onMounted(() => {
+const initialiseLegacyRoom = () => {
   let roomCodeLocal = getFromLocalStorage('roomCode');
   let nameLocal = getFromLocalStorage('username');
 
@@ -223,27 +214,57 @@ onMounted(() => {
     console.log(data);
     scores.value = data;
   });
+};
+
+onMounted(() => {
+  const code = roomCode.value;
+  const username = store.name || getFromLocalStorage('username') || 'Guest';
+  if (!code) {
+    router.replace('/dashboard');
+    return;
+  }
+
+  socket.emit('joinRoom', { code, username });
+  socket.on('roomJoined', (data) => {
+    store.updateRoomCode(data.code);
+    saveToLocalStorage('roomCode', data.code);
+    saveToLocalStorage('username', username);
+    connectedUsers.value = data.users;
+    isHost.value = data.hostId === socket.id;
+  });
+  socket.on('userListUpdated', (users) => { connectedUsers.value = users; });
+  socket.on('roomNotFound', () => {
+    Swal.fire({ title: 'Room not found', text: 'Ask the host for a valid room code.', icon: 'error' });
+    router.replace('/dashboard');
+  });
+  socket.on('roomError', (message) => Swal.fire({ title: 'Room update', text: message, icon: 'warning' }));
+  socket.on('quizLoading', () => { isLoading.value = true; isUsers.value = false; });
+  socket.on('quizStarted', () => { quizFinished.value = false; scores.value = []; });
+  socket.on('newQuestion', (data) => {
+    selectedAnswer.value = '';
+    answerResult.value = null;
+    currentQuestion.value = data.question;
+    currentOptions.value = data.options;
+    currentQuestionIndex.value = data.index;
+    isLoading.value = false;
+    isQuestions.value = true;
+  });
+  socket.on('answerResult', (result) => { answerResult.value = result; });
+  socket.on('updateScores', (data) => { scores.value = data; });
+  socket.on('quizEnded', ({ scores: finalScores }) => {
+    scores.value = finalScores;
+    quizFinished.value = true;
+  });
+});
+
+onUnmounted(() => {
+  ['roomJoined', 'userListUpdated', 'roomNotFound', 'roomError', 'quizLoading', 'quizStarted', 'newQuestion', 'answerResult', 'updateScores', 'quizEnded'].forEach((event) => socket.off(event));
 });
 
 const startQuiz = () => {
-  socket.emit('startQuiz', { roomCode: store.roomCode });
+  socket.emit('startQuiz', { roomCode: roomCode.value });
 };
-socket.on('startLoading', () => {
-  isLoading.value = true;
-});
-socket.on('endQuiz', () => {
-  alert('Quiz has ended!');
-  // Perform any other actions needed after the quiz ends
-});
-
-socket.on('stopLoader', () => {
-  isUsers.value = false;
-  isQuestions.value = true;
-  console.log(isQuestions);
-  // setTimeout(() => {/
-  isLoading.value = false;
-  // }, 1000);
-});
+const nextQuestion = () => socket.emit('nextQuestion', { roomCode: roomCode.value });
 </script>
 
 <style scoped lang="scss">
@@ -327,13 +348,29 @@ socket.on('stopLoader', () => {
       transform: translate(2px, -2px);
       box-shadow: -4px 4px 0 rgb(54, 201, 0);
     }
+    li.selected {
+      background-color: rgb(172, 255, 215);
+      color: black;
+      box-shadow: -4px 4px 0 rgb(54, 201, 0);
+    }
     li:active {
     }
   }
 }
 .icon {
   margin: 0.1rem 10px;
-
 }
-.short
+.answer-result, .quiz-finished {
+  margin: 1rem;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid white;
+}
+.answer-result {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+.answer-result.correct { border-color: #6ee7b7; }
+.answer-result.incorrect { border-color: #fca5a5; }
 </style>

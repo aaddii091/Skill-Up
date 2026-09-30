@@ -55,8 +55,9 @@ const joinRoom = () => {
 
 const hostRoom = async () => {
   const { value: formValues } = await Swal.fire({
-    title: 'Create Room',
+    title: 'Create an AI quiz room',
     html: `<div style="display:flex; flex-direction: column;">
+      <input id="swal-input1" class="input-custom my-1" placeholder="Quiz topic (for example: JavaScript)" />
       <select id="swal-input2" class="input-custom my-1">
         <option value="" disabled selected>No of Questions</option>
         <option value="1">1</option>
@@ -77,25 +78,33 @@ const hostRoom = async () => {
     focusConfirm: false,
     showCancelButton: true,
     preConfirm: () => {
+      const topic = document.getElementById('swal-input1').value.trim();
       const noOfQuestions = document.getElementById('swal-input2').value;
       const noOfRounds = document.getElementById('swal-input3').value;
 
-      if (!noOfQuestions || !noOfRounds) {
-        Swal.showValidationMessage('Please fill out all fields');
+      if (!topic || !noOfQuestions || !noOfRounds) {
+        Swal.showValidationMessage('Add a topic, number of questions, and rounds');
         return false; // Returning false prevents the dialog from closing
       }
 
-      return { noOfQuestions, noOfRounds };
+      return { topic, noOfQuestions, noOfRounds };
     },
   });
 
   if (formValues) {
-    const { noOfQuestions, noOfRounds } = formValues;
+    const { topic, noOfQuestions, noOfRounds } = formValues;
     const generatedCode = await randomCode();
     store.numberOfQuestions(noOfQuestions);
     store.updateRoomCode(generatedCode);
     store.numberOfRounds(noOfRounds);
-    socket.emit('createRoom', store.roomCode);
+    socket.emit('createRoom', {
+      code: store.roomCode,
+      settings: {
+        topic,
+        questionCount: Number(noOfQuestions),
+        rounds: Number(noOfRounds),
+      },
+    });
     store.updateHost(true);
 
     router.push('/room');

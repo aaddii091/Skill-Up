@@ -1,5 +1,6 @@
 const axios = require('axios');
 const socketIo = require('socket.io');
+const { generateQuiz } = require('./quiz');
 
 const rooms = {}; // Store room information
 const users = {}; // Store user information
@@ -9,7 +10,9 @@ const scores = {}; // Updated to use 'scores' consistently
 let questions = [];
 let joinedRoomId = 0;
 
-module.exports = (server) => {
+// The original implementation is retained below for historical reference only.
+// Skill Up uses the room-scoped implementation that follows.
+const legacySocket = (server) => {
   const io = socketIo(server);
 
   let questionIndex = 0;
@@ -148,6 +151,143 @@ module.exports = (server) => {
         console.log(`User: ${username} (ID: ${socket.id}) disconnected`);
       } else {
         console.log('User disconnected', socket.id);
+      }
+    });
+  });
+};
+
+const liveRooms = new Map();
+const QUESTION_DURATION_MS = 20000;
+
+const roomUsers = (room) =>
+  [...room.users.entries()].map(([id, user]) => ({ id, username: user.username }));
+
+const roomScores = (room) =>
+  roomUsers(room).map(({ id, username }) => ({
+    username,
+    score: room.scores.get(id) || 0,
+  }));
+
+module.exports = (server) => {
+  const io = socketIo(server, {
+    cors: { origin: process.env.CLIENT_ORIGIN || true, methods: ['GET', 'POST'] },
+  });
+
+  const publishUsers = (roomCode) => {
+    const room = liveRooms.get(roomCode);
+    if (room) io.to(roomCode).emit('userListUpdated', roomUsers(room));
+  };
+
+  const finishQuiz = (roomCode) => {
+    const room = liveRooms.get(roomCode);
+    if (!room?.quiz) return;
+    clearTimeout(room.quiz.timer);
+    room.quiz.finished = true;
+    io.to(roomCode).emit('quizEnded', { scores: roomScores(room) });
+  };
+
+  const sendQuestion = (roomCode) => {
+    const room = liveRooms.get(roomCode);
+    if (!room?.quiz || room.quiz.finished) return;
+    const question = room.quiz.questions[room.quiz.index];
+    if (!question) return finishQuiz(roomCode);
+
+    room.quiz.answers = new Set();
+    io.to(roomCode).emit('newQuestion', {
+      index: room.quiz.index,
+      total: room.quiz.questions.length,
+      question: question.question,
+      options: question.options,
+      duration: QUESTION_DURATION_MS / 1000,
+    });
+    room.quiz.timer = setTimeout(() => {
+      room.quiz.index += 1;
+      sendQuestion(roomCode);
+    }, QUESTION_DURATION_MS);
+  };
+
+  const advanceQuestion = (roomCode) => {
+    const room = liveRooms.get(roomCode);
+    if (!room?.quiz || room.quiz.finished) return;
+    clearTimeout(room.quiz.timer);
+    room.quiz.index += 1;
+    sendQuestion(roomCode);
+  };
+
+  io.on('connection', (socket) => {
+    socket.on('createRoom', ({ code, settings }) => {
+      if (!code || liveRooms.has(code)) {
+        return socket.emit('roomError', 'Unable to create this room. Please try another code.');
+      }
+      liveRooms.set(code, {
+        hostId: socket.id,
+        settings: {
+          topic: String(settings?.topic || 'General knowledge').trim(),
+          questionCount: Number(settings?.questionCount) || 5,
+          rounds: Number(settings?.rounds) || 1,
+        },
+        users: new Map(),
+        scores: new Map(),
+        quiz: null,
+      });
+      socket.join(code);
+      socket.emit('roomCreated', { code });
+    });
+
+    socket.on('joinRoom', ({ code, username }) => {
+      const room = liveRooms.get(code);
+      if (!room) return socket.emit('roomNotFound');
+      room.users.set(socket.id, { username: String(username || 'Guest').trim() || 'Guest' });
+      room.scores.set(socket.id, room.scores.get(socket.id) || 0);
+      socket.join(code);
+      socket.emit('roomJoined', { code, hostId: room.hostId, users: roomUsers(room), settings: room.settings });
+      publishUsers(code);
+    });
+
+    socket.on('startQuiz', async ({ roomCode }) => {
+      const room = liveRooms.get(roomCode);
+      if (!room) return socket.emit('roomNotFound');
+      if (room.hostId !== socket.id) return socket.emit('roomError', 'Only the host can start the quiz.');
+      if (room.quiz && !room.quiz.finished) return socket.emit('roomError', 'This quiz is already in progress.');
+
+      io.to(roomCode).emit('quizLoading');
+      const count = Math.min(room.settings.questionCount * room.settings.rounds, 10);
+      const quiz = await generateQuiz({ topic: room.settings.topic, count });
+      room.scores = new Map(roomUsers(room).map(({ id }) => [id, 0]));
+      room.quiz = { questions: quiz.questions, index: 0, answers: new Set(), timer: null, finished: false };
+      io.to(roomCode).emit('quizStarted', { total: quiz.questions.length, source: quiz.source });
+      sendQuestion(roomCode);
+    });
+
+    socket.on('submitAnswer', ({ roomCode, questionIndex, answer }) => {
+      const room = liveRooms.get(roomCode);
+      const quiz = room?.quiz;
+      if (!room || !quiz || quiz.finished || quiz.index !== questionIndex || quiz.answers.has(socket.id)) return;
+
+      quiz.answers.add(socket.id);
+      const question = quiz.questions[quiz.index];
+      const correct = question.answer === answer;
+      if (correct) room.scores.set(socket.id, (room.scores.get(socket.id) || 0) + 1);
+      socket.emit('answerResult', { correct, answer: question.answer, explanation: question.explanation });
+      io.to(roomCode).emit('updateScores', roomScores(room));
+    });
+
+    socket.on('nextQuestion', ({ roomCode }) => {
+      if (liveRooms.get(roomCode)?.hostId === socket.id) advanceQuestion(roomCode);
+    });
+
+    socket.on('disconnect', () => {
+      for (const [code, room] of liveRooms.entries()) {
+        if (!room.users.has(socket.id) && room.hostId !== socket.id) continue;
+        room.users.delete(socket.id);
+        room.scores.delete(socket.id);
+        if (room.hostId === socket.id) room.hostId = room.users.keys().next().value || null;
+        if (room.users.size === 0) {
+          if (room.quiz?.timer) clearTimeout(room.quiz.timer);
+          liveRooms.delete(code);
+        } else {
+          publishUsers(code);
+        }
       }
     });
   });
