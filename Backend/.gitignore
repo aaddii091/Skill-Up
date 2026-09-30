@@ -132,3 +132,6 @@ dist
 
 #config .env
 config.env
+
+# Local MongoDB X.509 client certificates contain private keys.
+certs/*.pem
